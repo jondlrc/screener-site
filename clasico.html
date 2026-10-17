@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Desk — Screener</title>
+<style>
+  :root{
+    --bg:#0a0d13; --surface:#0f141d; --surface-2:#141b26; --line:#1e2733;
+    --line-soft:#182029; --ink:#e8edf4; --ink-2:#9fb0c3; --ink-3:#5f7186;
+    --acc:#16c784; --acc-ink:#03130c;
+    --reacc:#0e8f63;
+    --dist:#f6465d; --dist-ink:#1c0407;
+    --redist:#a72a3a;
+    --mixed:#f4c65a; --mixed-ink:#1c1503;
+    --neu:#2a3444; --neu-ink:#9fb0c3;
+    --radius:16px; --radius-sm:10px;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 40px rgba(0,0,0,.45);
+    --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(22,199,132,.06), transparent 60%),
+      radial-gradient(900px 500px at 10% 0%, rgba(59,130,246,.05), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; padding:28px 22px 60px;
+  }
+  .wrap{max-width:1240px;margin:0 auto}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;
+    gap:20px;flex-wrap:wrap;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:42px;height:42px;border-radius:12px;flex:0 0 auto;
+    background:linear-gradient(140deg,#16c784,#0e8f63);
+    box-shadow:0 8px 24px rgba(22,199,132,.35);
+    display:grid;place-items:center;font-weight:800;color:#03130c;font-size:20px}
+  h1{font-size:19px;margin:0;letter-spacing:.2px;font-weight:700}
+  .sub{color:var(--ink-3);font-size:12.5px;margin-top:3px}
+  .meta{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{background:var(--surface);border:1px solid var(--line);
+    border-radius:999px;padding:7px 13px;font-size:12px;color:var(--ink-2);font-family:var(--mono)}
+  .chip b{color:var(--ink);font-weight:600}
+  .chip.demo{border-color:#7a5b12;color:#f4c65a;background:rgba(122,91,18,.15)}
+
+  /* Tabs de vista */
+  .tabs{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);
+    border-radius:999px;padding:5px;width:fit-content;margin-bottom:14px}
+  .tab{padding:8px 18px;border-radius:999px;font-size:13px;cursor:pointer;color:var(--ink-2);
+    font-weight:600;user-select:none;transition:all .15s;border:1px solid transparent}
+  .tab:hover{color:var(--ink)}
+  .tab.on{background:var(--surface-2);color:var(--ink);border-color:#2d4356}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .search{flex:1;min-width:180px}
+  .search input{width:100%;background:var(--surface);border:1px solid var(--line);
+    color:var(--ink);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;
+    font-family:var(--mono);outline:none;transition:border-color .15s}
+  .search input:focus{border-color:#2d4356}
+  .filters{display:flex;gap:7px;flex-wrap:wrap}
+  .btn{background:var(--surface);border:1px solid var(--line);color:var(--ink-2);
+    border-radius:999px;padding:8px 13px;font-size:12px;cursor:pointer;font-family:var(--mono);
+    transition:all .15s;user-select:none}
+  .btn:hover{border-color:#2d4356;color:var(--ink)}
+  .btn.on{background:var(--surface-2);color:var(--ink);border-color:#2d4356}
+
+  .card{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .scroll{overflow-x:auto}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:640px}
+  th,td{padding:0;text-align:center}
+  thead th{position:sticky;top:0;z-index:3;background:var(--surface-2);
+    color:var(--ink-2);font-size:11.5px;font-weight:600;letter-spacing:.6px;
+    padding:13px 10px;border-bottom:1px solid var(--line);cursor:pointer;
+    font-family:var(--mono);white-space:nowrap}
+  thead th:hover{color:var(--ink)}
+  thead th.pairhead{text-align:left;padding-left:20px;cursor:default;position:sticky;left:0;z-index:4}
+  thead th .arrow{opacity:.35;font-size:9px;margin-left:4px}
+  thead th.sorted .arrow{opacity:1;color:var(--acc)}
+
+  tbody td{border-bottom:1px solid var(--line-soft);padding:9px 8px}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:rgba(255,255,255,.015)}
+  .pair{position:sticky;left:0;z-index:2;background:var(--surface);text-align:left;
+    padding-left:20px;font-family:var(--mono);font-size:13.5px;font-weight:600;letter-spacing:.3px}
+  tbody tr:hover .pair{background:#111825}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;min-width:88px;justify-content:center;
+    padding:7px 11px;border-radius:var(--radius-sm);font-size:11.5px;font-weight:700;
+    font-family:var(--mono);letter-spacing:.4px;border:1px solid transparent;position:relative;transition:transform .1s}
+  .pill:hover{transform:translateY(-1px)}
+  .pill .g{font-size:10px;opacity:.9}
+  .pill.acc{background:var(--acc);color:var(--acc-ink)}
+  .pill.reacc{background:transparent;color:var(--acc);border-color:var(--reacc);box-shadow:0 0 0 1px rgba(22,199,132,.15) inset}
+  .pill.dist{background:var(--dist);color:var(--dist-ink)}
+  .pill.redist{background:transparent;color:var(--dist);border-color:var(--redist);box-shadow:0 0 0 1px rgba(246,70,93,.15) inset}
+  .pill.mixed{background:var(--mixed);color:var(--mixed-ink)}
+  .pill.neu{background:var(--neu);color:var(--neu-ink)}
+  .pill[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);
+    left:50%;transform:translateX(-50%);background:#05080d;border:1px solid var(--line);color:var(--ink-2);
+    padding:8px 11px;border-radius:8px;font-size:11px;white-space:nowrap;font-family:var(--mono);z-index:20;
+    box-shadow:0 8px 24px rgba(0,0,0,.5)}
+
+  /* Barra de porcentaje (sentiment) */
+  .barcell{display:flex;align-items:center;gap:10px;min-width:150px;padding:0 6px}
+  .bar{flex:1;height:10px;border-radius:6px;background:var(--dist);overflow:hidden;position:relative;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .bar > i{display:block;height:100%;background:var(--acc);border-radius:6px 0 0 6px}
+  .barnum{font-family:var(--mono);font-size:12px;font-weight:700;width:40px;text-align:right}
+  .barnum.bull{color:var(--acc)} .barnum.bear{color:var(--dist)} .barnum.mid{color:var(--mixed)}
+  .comp{font-family:var(--mono);font-size:12px;font-weight:700}
+  .comp.bull{color:var(--acc)} .comp.bear{color:var(--dist)} .comp.mid{color:var(--ink-3)} .comp.vol{color:var(--ink-2)}
+  .na{color:var(--ink-3);font-family:var(--mono);font-size:12px}
+  .conf{display:inline-block;margin-left:8px;font-size:9.5px;font-family:var(--mono);font-weight:700;
+    color:#0a0d13;background:var(--acc);border-radius:5px;padding:2px 6px;letter-spacing:.5px;vertical-align:middle}
+  .conf.bear{background:var(--dist)}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:16px 2px 0;color:var(--ink-3);font-size:11.5px;font-family:var(--mono)}
+  .legend .item{display:flex;align-items:center;gap:7px}
+  .swatch{width:22px;height:14px;border-radius:5px;border:1px solid transparent}
+  .swatch.acc{background:var(--acc)} .swatch.reacc{background:transparent;border-color:var(--reacc)}
+  .swatch.dist{background:var(--dist)} .swatch.redist{background:transparent;border-color:var(--redist)}
+  .swatch.mixed{background:var(--mixed)} .swatch.neu{background:var(--neu)}
+  .foot{color:var(--ink-3);font-size:11px;margin-top:22px;text-align:center;font-family:var(--mono);line-height:1.7}
+  .empty{padding:40px;text-align:center;color:var(--ink-3);font-family:var(--mono);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">TD</div>
+      <div><h1>Trading Desk — Screener</h1><div class="sub" id="sub"></div></div>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <span class="tab on" data-view="models">Modelos</span>
+    <span class="tab" data-view="sentiment">Sentiment</span>
+    <span class="tab" data-view="combined">Combinado</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="search"><input id="q" placeholder="filtrar par… (ej. JPY, EUR)"></div>
+    <div class="filters" id="biasFilters">
+      <span class="btn on" data-bias="all">Todos</span>
+      <span class="btn" data-bias="bull">▲ Bull</span>
+      <span class="btn" data-bias="bear">▼ Bear</span>
+      <span class="btn" data-bias="flat">◆ Mixto</span>
+    </div>
+  </div>
+
+  <div class="card"><div class="scroll"><table id="grid">
+    <thead id="thead"></thead><tbody id="tbody"></tbody>
+  </table></div></div>
+
+  <div class="legend" id="legend"></div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const DATA = {"results": [{"pair": "EURUSD", "cells": {"M15": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 3  gate open  BBBBBSSBBBSS", "bars": 5000}, "M30": {"tag": "Redistribution", "debug": "dom S  cnt 2  cur 2  prev 2  gate open  SBSBBSSBSSBB", "bars": 5000}, "H1": {"tag": "Redistribution", "debug": "dom S  cnt 2  cur 2  prev 3  gate open  SBSSSSBSSSBB", "bars": 5000}, "H2": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "H4": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 8  gate open  BBBSSSSSSSSB", "bars": 5000}, "H12": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 4  gate open  BSSSBBBSSSSB", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  SBSSBBSSSBSS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 3  cur 3  prev 5  gate open  BSSSBBBBBSSS", "bars": 2167}, "W": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "MN": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 3  gate open  BBSBBBSSSS", "bars": 292}}, "model_bias": {"pct": 25.0, "score": -0.5, "verdict": "Bearish", "bull": 2, "bear": 6}, "sentiment": {"intraday_pct": 58.7, "higher_pct": 29.9, "overall_pct": 44.3, "score": -0.114, "verdict": "Mixed", "intraday": {"stage": -0.6, "trend": 0.9, "momentum": 0.101, "volume": 0.838, "score": 17.4, "normalized": 58.7, "trend_signals": [38, 40]}, "higher": {"stage": -0.333, "trend": -0.5, "momentum": -0.11, "volume": 1.218, "score": -40.1, "normalized": 29.9, "trend_signals": [4, 16]}, "components": {"stage": -0.467, "trend": 0.2, "momentum": -0.004, "volume": 1.028}}, "combined": {"score": -0.307, "verdict": "Bearish", "confluence": false}, "retail": {"long": 78.0, "short": 22.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": true, "count": 2, "total": 3, "our_dir": -1}, "levels": {"high": 1.1241, "low": 1.11129, "tf": "D"}}, {"pair": "GBPUSD", "cells": {"M15": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 11  gate open  BBBBBBBBBBBS", "bars": 5000}, "M30": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 4  gate open  SBBBSBSBBBBS", "bars": 5000}, "H1": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "H2": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 2  gate open  SSSSSSSSBSSB", "bars": 5000}, "H4": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 7  gate open  BBBBSSSSSSSB", "bars": 5000}, "H12": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 4  gate open  SBSBBBBSSSSB", "bars": 5000}, "D": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 2  gate open  SSBBSSBSBSSB", "bars": 5000}, "3D": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  SBBSBBSSBSBS", "bars": 2170}, "W": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 3  gate open  BBBSBSSBBBSS", "bars": 1275}, "MN": {"tag": "Distribution", "debug": "dom B  cnt 3  cur 3  prev 1  gate shut  BBBSSBSSS", "bars": 292}}, "model_bias": {"pct": 22.2, "score": -0.5556, "verdict": "Bearish", "bull": 2, "bear": 7}, "sentiment": {"intraday_pct": 67.8, "higher_pct": 23.5, "overall_pct": 45.6, "score": -0.088, "verdict": "Mixed", "intraday": {"stage": -0.2, "trend": 1.0, "momentum": 0.17, "volume": 0.924, "score": 35.7, "normalized": 67.8, "trend_signals": [40, 40]}, "higher": {"stage": -1.0, "trend": -0.333, "momentum": -0.003, "volume": 1.219, "score": -52.9, "normalized": 23.5, "trend_signals": [8, 24]}, "components": {"stage": -0.6, "trend": 0.334, "momentum": 0.084, "volume": 1.072}}, "combined": {"score": -0.3218, "verdict": "Bearish", "confluence": false}, "retail": {"long": 41.0, "short": 59.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": false, "count": 1, "total": 3, "our_dir": -1}, "levels": {"high": 1.33718, "low": 1.3137, "tf": "D"}}, {"pair": "USDJPY", "cells": {"M15": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 1  gate shut  BSSSSSBBSBSS", "bars": 5000}, "M30": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 3  gate open  BSBBSSSBBBSS", "bars": 5000}, "H1": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  BSSBBSBSBSBS", "bars": 5000}, "H2": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  SBBBBSSBBSBS", "bars": 5000}, "H4": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  SBBBBSSBBSBS", "bars": 5000}, "H12": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 2  gate open  BBSBBSBSBBSS", "bars": 5000}, "D": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 2  gate open  BBBBSBBSBBSS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 8  gate open  SSBBBBBBBBSS", "bars": 2164}, "W": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 1  gate shut  SSSBBBSBBSBS", "bars": 1275}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 4  prev 4  gate open  SSBBSSSSBBBB", "bars": 292}}, "model_bias": {"pct": 50.0, "score": 0.0, "verdict": "Neutral", "bull": 5, "bear": 5}, "sentiment": {"intraday_pct": 32.5, "higher_pct": 74.0, "overall_pct": 53.2, "score": 0.064, "verdict": "Mixed", "intraday": {"stage": -0.333, "trend": -0.75, "momentum": -0.033, "volume": 0.857, "score": -35.0, "normalized": 32.5, "trend_signals": [6, 48]}, "higher": {"stage": 0.5, "trend": 0.5, "momentum": 0.045, "volume": 1.325, "score": 48.0, "normalized": 74.0, "trend_signals": [18, 24]}, "components": {"stage": 0.083, "trend": -0.125, "momentum": 0.006, "volume": 1.091}}, "combined": {"score": 0.032, "verdict": "Mixed", "confluence": false}, "retail": {"long": 53.0, "short": 47.0, "available": true}, "conviction": {"internal": false, "horizon": false, "contra": false, "count": 0, "total": 3, "our_dir": 1}, "levels": {"high": 160.394, "low": 152.888, "tf": "D"}}, {"pair": "USDCHF", "cells": {"M15": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 5  gate open  BBSSBBSSSSSB", "bars": 5000}, "M30": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 5  gate open  BSSBBBSSSSSB", "bars": 5000}, "H1": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 2  gate open  BBSSBSBBSSSS", "bars": 5000}, "H2": {"tag": "Distribution", "debug": "dom B  cnt 3  cur 3  prev 1  gate shut  SBBBBBBSBSSS", "bars": 5000}, "H4": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  SSSBSBBBBSBS", "bars": 5000}, "H12": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 2  gate open  SBBBBBBSSBBB", "bars": 5000}, "D": {"tag": "Accumulation", "debug": "dom S  cnt 2  cur 2  prev 1  gate shut  SSBBSSBBBSBB", "bars": 5000}, "3D": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 2  prev 1  gate shut  BBSBSSSBBSBB", "bars": 2167}, "W": {"tag": "Redistribution", "debug": "dom S  cnt 3  cur 3  prev 4  gate open  BBSSBSSSSBBB", "bars": 1275}, "MN": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 1  gate shut  SSBBSSSBSSSS", "bars": 292}}, "model_bias": {"pct": 30.0, "score": -0.4, "verdict": "Bearish", "bull": 3, "bear": 7}, "sentiment": {"intraday_pct": 16.7, "higher_pct": 54.6, "overall_pct": 35.6, "score": -0.288, "verdict": "Mixed", "intraday": {"stage": -0.667, "trend": -1.0, "momentum": -0.184, "volume": 1.024, "score": -66.5, "normalized": 16.7, "trend_signals": [0, 40]}, "higher": {"stage": 0.0, "trend": 0.167, "momentum": 0.06, "volume": 1.11, "score": 9.2, "normalized": 54.6, "trend_signals": [14, 24]}, "components": {"stage": -0.334, "trend": -0.416, "momentum": -0.062, "volume": 1.067}}, "combined": {"score": -0.344, "verdict": "Bearish", "confluence": true}, "retail": {"long": 44.0, "short": 56.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": false, "count": 1, "total": 3, "our_dir": -1}, "levels": {"high": 0.83826, "low": 0.81834, "tf": "D"}}, {"pair": "USDCAD", "cells": {"M15": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "M30": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 6  prev 1  gate shut  SBBSSBSSSSSS", "bars": 5000}, "H1": {"tag": "Distribution", "debug": "dom B  cnt 3  cur 3  prev 1  gate shut  SBBBSSBSBSSS", "bars": 5000}, "H2": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 1  gate shut  SSBBBSSBSSSS", "bars": 5000}, "H4": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 6  gate open  BBBSBBBBBBSS", "bars": 5000}, "H12": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 2  gate open  BBBSSSSBSBBS", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 2  gate open  SBSSSSBBSBBS", "bars": 5000}, "3D": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SBBSSBSBBBSB", "bars": 2166}, "W": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 4  prev 1  gate shut  SSSSSSBSBBBB", "bars": 292}}, "model_bias": {"pct": 37.5, "score": -0.25, "verdict": "Bearish", "bull": 3, "bear": 5}, "sentiment": {"intraday_pct": 19.6, "higher_pct": 69.7, "overall_pct": 44.7, "score": -0.106, "verdict": "Mixed", "intraday": {"stage": -0.6, "trend": -0.9, "momentum": -0.321, "volume": 0.97, "score": -60.8, "normalized": 19.6, "trend_signals": [2, 40]}, "higher": {"stage": 0.333, "trend": 0.5, "momentum": 0.074, "volume": 1.228, "score": 39.3, "normalized": 69.7, "trend_signals": [12, 16]}, "components": {"stage": -0.133, "trend": -0.2, "momentum": -0.123, "volume": 1.099}}, "combined": {"score": -0.178, "verdict": "Bearish", "confluence": false}, "retail": {"long": 13.0, "short": 87.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": false, "count": 1, "total": 3, "our_dir": -1}, "levels": {"high": 1.42998, "low": 1.41345, "tf": "D"}}, {"pair": "AUDUSD", "cells": {"M15": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  BSSSBBBBBSBS", "bars": 5000}, "M30": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "H1": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 3  gate open  SSBBSSSBBBSS", "bars": 5000}, "H2": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 1  gate shut  SSSBBSSBBSBS", "bars": 5000}, "H4": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 6  prev 3  gate open  BSSBBBSSSSSS", "bars": 5000}, "H12": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  BSBBBBBBSBSS", "bars": 5000}, "D": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 2  gate open  BBBSBBSSSBBS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 2  gate open  BBBSBSBSSBBS", "bars": 2175}, "W": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 5  prev 5  gate open  SBSSSSSBBBBB", "bars": 1275}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 3  gate open  BBSBBBSBSSSB", "bars": 292}}, "model_bias": {"pct": 44.4, "score": -0.1111, "verdict": "Bearish", "bull": 4, "bear": 5}, "sentiment": {"intraday_pct": 29.1, "higher_pct": 58.0, "overall_pct": 43.5, "score": -0.13, "verdict": "Mixed", "intraday": {"stage": -1.0, "trend": -0.3, "momentum": 0.008, "volume": 0.999, "score": -41.7, "normalized": 29.1, "trend_signals": [14, 40]}, "higher": {"stage": 1.0, "trend": -0.333, "momentum": -0.089, "volume": 1.116, "score": 15.9, "normalized": 58.0, "trend_signals": [8, 24]}, "components": {"stage": 0.0, "trend": -0.317, "momentum": -0.04, "volume": 1.058}}, "combined": {"score": -0.1206, "verdict": "Mixed", "confluence": false}, "retail": {"long": 71.0, "short": 29.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": true, "count": 2, "total": 3, "our_dir": -1}, "levels": {"high": 0.7238, "low": 0.6904, "tf": "D"}}, {"pair": "NZDUSD", "cells": {"M15": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "M30": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 3  gate open  BSSSBBBSBBBS", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom S  cnt 2  cur 2  prev 1  gate shut  BSSBSSBBBSBB", "bars": 5000}, "H2": {"tag": "Accumulation", "debug": "dom S  cnt 2  cur 2  prev 1  gate shut  SSSSSSSSBSBB", "bars": 5000}, "H4": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SSSSSSSSSBSB", "bars": 5000}, "H12": {"tag": "Re-accumulation", "debug": "dom B  cnt 3  cur 3  prev 4  gate open  BSBSSBBBBSSS", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 2  gate open  SBSBBBSSSBBS", "bars": 5000}, "3D": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 3  prev 1  gate shut  BSSSSBBSBSSS", "bars": 2174}, "W": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 3  prev 1  gate shut  SSBSBBSSBSSS", "bars": 1255}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 2  gate open  BBSBSSB", "bars": 288}}, "model_bias": {"pct": 66.7, "score": 0.3333, "verdict": "Bullish", "bull": 6, "bear": 3}, "sentiment": {"intraday_pct": 85.4, "higher_pct": 26.5, "overall_pct": 56.0, "score": 0.12, "verdict": "Mixed", "intraday": {"stage": 1.0, "trend": 0.9, "momentum": 0.173, "volume": 1.001, "score": 70.7, "normalized": 85.4, "trend_signals": [38, 40]}, "higher": {"stage": -0.5, "trend": -0.667, "momentum": -0.127, "volume": 1.042, "score": -47.0, "normalized": 26.5, "trend_signals": [4, 24]}, "components": {"stage": 0.25, "trend": 0.116, "momentum": 0.023, "volume": 1.022}}, "combined": {"score": 0.2266, "verdict": "Bullish", "confluence": false}, "retail": {"long": 88.0, "short": 12.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": false, "count": 1, "total": 3, "our_dir": 1}, "levels": {"high": 0.5988, "low": 0.55803, "tf": "D"}}, {"pair": "EURJPY", "cells": {"M15": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 7  gate open  SSSBBBBBBBSS", "bars": 5000}, "M30": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  BBSSSBSSBBSB", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SSSBSSBSSBSB", "bars": 5000}, "H2": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 3  gate open  SSSSBSSBSSSB", "bars": 5000}, "H4": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "H12": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 4  gate open  SBSSBBBBSSSS", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom B  cnt 3  cur 3  prev 1  gate shut  BSBBBBBSBSSS", "bars": 5000}, "3D": {"tag": "Distribution", "debug": "dom B  cnt 3  cur 3  prev 1  gate shut  BSBBBBBSBSSS", "bars": 2165}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 3  gate open  SSBBBBBSBBBS", "bars": 1275}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 1  gate shut  SBBSSBBBBBSB", "bars": 292}}, "model_bias": {"pct": 55.6, "score": 0.1111, "verdict": "Bullish", "bull": 5, "bear": 4}, "sentiment": {"intraday_pct": 69.9, "higher_pct": 44.3, "overall_pct": 57.1, "score": 0.142, "verdict": "Mixed", "intraday": {"stage": 0.2, "trend": 0.9, "momentum": 0.127, "volume": 0.875, "score": 39.8, "normalized": 69.9, "trend_signals": [38, 40]}, "higher": {"stage": 0.0, "trend": -0.167, "momentum": -0.099, "volume": 1.213, "score": -11.3, "normalized": 44.3, "trend_signals": [10, 24]}, "components": {"stage": 0.1, "trend": 0.366, "momentum": 0.014, "volume": 1.044}}, "combined": {"score": 0.1265, "verdict": "Mixed", "confluence": false}, "retail": {"long": 55.0, "short": 45.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": false, "count": 1, "total": 3, "our_dir": 1}, "levels": {"high": 180.859, "low": 176.222, "tf": "D"}}, {"pair": "GBPJPY", "cells": {"M15": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 5  gate open  SBBBSBBBBBSS", "bars": 5000}, "M30": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 1  gate shut  BBBSSBBBSBBB", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 1  gate shut  SSBBBBSSBBSB", "bars": 5000}, "H2": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 2  gate open  BSSBBSBBSSSS", "bars": 5000}, "H4": {"tag": "Re-accumulation", "debug": "dom B  cnt 3  cur 3  prev 2  gate open  BSBBBSSBBSSS", "bars": 5000}, "H12": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 2  gate open  BBBSSBBSBBSS", "bars": 5000}, "D": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 2  gate open  BBBBSBBSBBSS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 3  gate open  BBBBBBSBBBSS", "bars": 2166}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 14  gate open  BBBBBBBBBBBS", "bars": 1275}, "MN": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  BSBSBBBSSBS", "bars": 292}}, "model_bias": {"pct": 80.0, "score": 0.6, "verdict": "Bullish", "bull": 8, "bear": 2}, "sentiment": {"intraday_pct": 82.0, "higher_pct": 63.3, "overall_pct": 72.7, "score": 0.454, "verdict": "Bullish", "intraday": {"stage": 0.667, "trend": 1.0, "momentum": 0.175, "volume": 0.99, "score": 64.1, "normalized": 82.0, "trend_signals": [40, 40]}, "higher": {"stage": 0.5, "trend": 0.167, "momentum": 0.056, "volume": 1.146, "score": 26.6, "normalized": 63.3, "trend_signals": [14, 24]}, "components": {"stage": 0.584, "trend": 0.584, "momentum": 0.115, "volume": 1.068}}, "combined": {"score": 0.527, "verdict": "Bullish", "confluence": true}, "retail": {"long": 59.0, "short": 41.0, "available": true}, "conviction": {"internal": true, "horizon": true, "contra": false, "count": 2, "total": 3, "our_dir": 1}, "levels": {"high": 217.478, "low": 207.1, "tf": "D"}}, {"pair": "EURGBP", "cells": {"M15": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 1  gate shut  BSSBSSSBSSSS", "bars": 5000}, "M30": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 1  gate shut  SSSSBBSBSSSS", "bars": 5000}, "H1": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 2  gate open  SBSSSSSSBBSS", "bars": 5000}, "H2": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 2  gate open  BSSSSSSSBBSS", "bars": 5000}, "H4": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 1  gate shut  SBSSSSSSSBSS", "bars": 5000}, "H12": {"tag": "Re-accumulation", "debug": "dom B  cnt 3  cur 3  prev 4  gate open  BSSSSBBBBSSS", "bars": 5000}, "D": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "3D": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  SBSBBBSBSBSS", "bars": 2168}, "W": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 3  gate open  SBSBBSSBBBSS", "bars": 1275}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 2  prev 0  gate shut  BB", "bars": 292}}, "model_bias": {"pct": 22.2, "score": -0.5556, "verdict": "Bearish", "bull": 2, "bear": 7}, "sentiment": {"intraday_pct": 29.8, "higher_pct": 26.9, "overall_pct": 28.4, "score": -0.432, "verdict": "Bearish", "intraday": {"stage": -0.667, "trend": -0.5, "momentum": -0.096, "volume": 0.95, "score": -40.5, "normalized": 29.8, "trend_signals": [12, 48]}, "higher": {"stage": -0.333, "trend": -0.75, "momentum": -0.212, "volume": 1.01, "score": -46.2, "normalized": 26.9, "trend_signals": [2, 16]}, "components": {"stage": -0.5, "trend": -0.625, "momentum": -0.154, "volume": 0.98}}, "combined": {"score": -0.4938, "verdict": "Bearish", "confluence": true}, "retail": {"long": 92.0, "short": 8.0, "available": true}, "conviction": {"internal": true, "horizon": true, "contra": true, "count": 3, "total": 3, "our_dir": -1}, "levels": null}, {"pair": "EURAUD", "cells": {"M15": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  SSSBBBBSSSBS", "bars": 5000}, "M30": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 1  gate shut  BBSSBBBSSSBS", "bars": 5000}, "H1": {"tag": "Redistribution", "debug": "dom S  cnt 2  cur 2  prev 3  gate open  BBSSSSBSSSBB", "bars": 5000}, "H2": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  BBBBSSSSSBSB", "bars": 5000}, "H4": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 5  gate open  SSBBBBSSSSSB", "bars": 5000}, "H12": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SBBBSBSSSBSB", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 1  gate shut  SSSBSBBSSSBS", "bars": 5000}, "3D": {"tag": "Distribution", "debug": "dom B  cnt 3  cur 3  prev 1  gate shut  SBBBSSBSBSSS", "bars": 2165}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 5  gate open  BBSSSBBBBBSS", "bars": 1167}, "MN": {"tag": "Redistribution", "debug": "dom S  cnt 2  cur 2  prev 2  gate open  SBSSSBBBSSBB", "bars": 268}}, "model_bias": {"pct": 30.0, "score": -0.4, "verdict": "Bearish", "bull": 3, "bear": 7}, "sentiment": {"intraday_pct": 62.2, "higher_pct": 27.1, "overall_pct": 44.7, "score": -0.106, "verdict": "Mixed", "intraday": {"stage": -0.333, "trend": 0.833, "momentum": 0.095, "volume": 0.943, "score": 24.4, "normalized": 62.2, "trend_signals": [44, 48]}, "higher": {"stage": -0.5, "trend": -0.5, "momentum": -0.088, "volume": 1.226, "score": -45.8, "normalized": 27.1, "trend_signals": [6, 24]}, "components": {"stage": -0.416, "trend": 0.166, "momentum": 0.004, "volume": 1.085}}, "combined": {"score": -0.253, "verdict": "Bearish", "confluence": false}, "retail": {"long": 54.0, "short": 46.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": true, "count": 2, "total": 3, "our_dir": -1}, "levels": {"high": 1.63353, "low": 1.59548, "tf": "D"}}, {"pair": "EURCAD", "cells": {"M15": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "M30": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 3  gate open  SBSSBSSBSSSB", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 2  gate open  SSBSSBSSBSSB", "bars": 5000}, "H2": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 5  gate open  BBSBSBSSSSSB", "bars": 5000}, "H4": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 5  prev 1  gate shut  BBSSBSBSSSSS", "bars": 5000}, "H12": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 5  prev 2  gate open  BSBSSBBSSSSS", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  BSBSSBSBSBSS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 3  cur 3  prev 7  gate open  BSBBBBBBBSSS", "bars": 2169}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 4  gate open  SSBBBBSBBBBS", "bars": 1167}, "MN": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SBSSBBSBSB", "bars": 268}}, "model_bias": {"pct": 55.6, "score": 0.1111, "verdict": "Bullish", "bull": 5, "bear": 4}, "sentiment": {"intraday_pct": 27.3, "higher_pct": 52.9, "overall_pct": 40.1, "score": -0.198, "verdict": "Mixed", "intraday": {"stage": -0.2, "trend": -0.9, "momentum": -0.201, "volume": 0.957, "score": -45.4, "normalized": 27.3, "trend_signals": [2, 40]}, "higher": {"stage": 0.5, "trend": -0.167, "momentum": -0.086, "volume": 0.967, "score": 5.8, "normalized": 52.9, "trend_signals": [10, 24]}, "components": {"stage": 0.15, "trend": -0.533, "momentum": -0.144, "volume": 0.962}}, "combined": {"score": -0.0435, "verdict": "Mixed", "confluence": false}, "retail": {"long": 87.0, "short": 13.0, "available": true}, "conviction": {"internal": false, "horizon": false, "contra": true, "count": 1, "total": 3, "our_dir": -1}, "levels": {"high": 1.61386, "low": 1.58616, "tf": "D"}}, {"pair": "AUDJPY", "cells": {"M15": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "M30": {"tag": "Redistribution", "debug": "dom S  cnt 3  cur 3  prev 5  gate open  SBBBSSSSSBBB", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 3  gate open  BBSSSBBBSSSB", "bars": 5000}, "H2": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 2  gate open  BBSSBBBSBSSB", "bars": 5000}, "H4": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 1  gate shut  BSSSSBSBSSBS", "bars": 5000}, "H12": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  SBSSSBBBSBSS", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  SBBSBSSBSBSS", "bars": 5000}, "3D": {"tag": "Distribution", "debug": "dom B  cnt 1  cur 1  prev 1  gate shut  BBBBBBBBSSBS", "bars": 2165}, "W": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 2  gate open  BBSBSBBSSBBB", "bars": 1167}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 2  prev 1  gate shut  BBSBB", "bars": 268}}, "model_bias": {"pct": 33.3, "score": -0.3333, "verdict": "Bearish", "bull": 3, "bear": 6}, "sentiment": {"intraday_pct": 30.2, "higher_pct": 45.9, "overall_pct": 38.0, "score": -0.24, "verdict": "Bearish", "intraday": {"stage": -0.6, "trend": -0.6, "momentum": -0.013, "volume": 0.937, "score": -39.7, "normalized": 30.2, "trend_signals": [8, 40]}, "higher": {"stage": 0.0, "trend": -0.167, "momentum": -0.034, "volume": 1.083, "score": -8.2, "normalized": 45.9, "trend_signals": [10, 24]}, "components": {"stage": -0.3, "trend": -0.384, "momentum": -0.024, "volume": 1.01}}, "combined": {"score": -0.2866, "verdict": "Bearish", "confluence": true}, "retail": {"long": 57.0, "short": 43.0, "available": true}, "conviction": {"internal": true, "horizon": true, "contra": true, "count": 3, "total": 3, "our_dir": -1}, "levels": {"high": 112.626, "low": 108.706, "tf": "D"}}, {"pair": "CADJPY", "cells": {"M15": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 5  prev 2  gate open  BSSBBSSBBBBB", "bars": 5000}, "M30": {"tag": "Redistribution", "debug": "dom S  cnt 3  cur 3  prev 2  gate open  BBSBSBBSSBBB", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 2  gate open  SBBBSBBSSBBB", "bars": 5000}, "H2": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SBSSSBSBBBSB", "bars": 5000}, "H4": {"tag": "Redistribution", "debug": "dom S  cnt 3  cur 3  prev 3  gate open  BSSSSBSSSBBB", "bars": 5000}, "H12": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 2  gate open  SBBSSSBBBSSB", "bars": 5000}, "D": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 4  gate open  BSSBBBSBBBBS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 6  gate open  SBBBSBBBBBBS", "bars": 2167}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 3  gate open  SBBBBBBSBBBS", "bars": 1167}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 1  gate shut  BBBSSBBBSB", "bars": 268}}, "model_bias": {"pct": 80.0, "score": 0.6, "verdict": "Bullish", "bull": 8, "bear": 2}, "sentiment": {"intraday_pct": 72.9, "higher_pct": 57.2, "overall_pct": 65.1, "score": 0.302, "verdict": "Bullish", "intraday": {"stage": 0.333, "trend": 0.917, "momentum": 0.247, "volume": 0.86, "score": 45.9, "normalized": 72.9, "trend_signals": [46, 48]}, "higher": {"stage": 1.0, "trend": -0.167, "momentum": -0.027, "volume": 0.638, "score": 14.4, "normalized": 57.2, "trend_signals": [10, 24]}, "components": {"stage": 0.666, "trend": 0.375, "momentum": 0.11, "volume": 0.749}}, "combined": {"score": 0.451, "verdict": "Bullish", "confluence": true}, "retail": {"long": 78.0, "short": 22.0, "available": true}, "conviction": {"internal": true, "horizon": true, "contra": false, "count": 2, "total": 3, "our_dir": 1}, "levels": {"high": 118.864, "low": 101.66, "tf": "D"}}, {"pair": "CHFJPY", "cells": {"M15": {"tag": "Neutral", "debug": "dom -  cnt 0  cur 0  prev 0  gate shut  ", "bars": 0}, "M30": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 4  prev 2  gate open  BSSSSBSSBBBB", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 2  gate open  SSBBSBBSSBBB", "bars": 5000}, "H2": {"tag": "Redistribution", "debug": "dom S  cnt 3  cur 3  prev 2  gate open  SSSSBBBSSBBB", "bars": 5000}, "H4": {"tag": "Redistribution", "debug": "dom S  cnt 3  cur 3  prev 2  gate open  BBSSSBBSSBBB", "bars": 5000}, "H12": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 3  gate open  BBSSSSSBSSSB", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  BBBBSBSSSBSS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 2  gate open  BBBBBBBSBBSS", "bars": 2167}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 6  gate open  BBBSBBBBBBSS", "bars": 1167}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 4  prev 1  gate shut  BBBSBBSBBBB", "bars": 268}}, "model_bias": {"pct": 55.6, "score": 0.1111, "verdict": "Bullish", "bull": 5, "bear": 4}, "sentiment": {"intraday_pct": 70.4, "higher_pct": 53.5, "overall_pct": 62.0, "score": 0.24, "verdict": "Bullish", "intraday": {"stage": -0.2, "trend": 1.0, "momentum": 0.223, "volume": 1.018, "score": 40.8, "normalized": 70.4, "trend_signals": [40, 40]}, "higher": {"stage": 0.5, "trend": -0.167, "momentum": -0.015, "volume": 0.891, "score": 7.1, "normalized": 53.5, "trend_signals": [10, 24]}, "components": {"stage": 0.15, "trend": 0.416, "momentum": 0.104, "volume": 0.955}}, "combined": {"score": 0.1755, "verdict": "Bullish", "confluence": false}, "retail": {"long": 55.0, "short": 45.0, "available": true}, "conviction": {"internal": true, "horizon": true, "contra": false, "count": 2, "total": 3, "our_dir": 1}, "levels": {"high": 198.776, "low": 187.849, "tf": "D"}}, {"pair": "GBPAUD", "cells": {"M15": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 2  gate open  SSSBBSBBBSSB", "bars": 5000}, "M30": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  BSBSSSSBBBSB", "bars": 5000}, "H1": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 1  gate shut  SSBBBSBBBBSB", "bars": 5000}, "H2": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 1  gate shut  BBSSBBBBBBSB", "bars": 5000}, "H4": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 1  gate shut  SBBSSBBSBBSB", "bars": 5000}, "H12": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 2  prev 3  gate open  SBSBBBBSSSBB", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 3  gate open  SBSSSSBSBBBS", "bars": 5000}, "3D": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 2  gate open  BBSBSSSBSBBS", "bars": 2166}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 5  gate open  BBSSSBBBBBSS", "bars": 1167}, "MN": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SSSBSSSBBSB", "bars": 268}}, "model_bias": {"pct": 80.0, "score": 0.6, "verdict": "Bullish", "bull": 8, "bear": 2}, "sentiment": {"intraday_pct": 77.1, "higher_pct": 54.9, "overall_pct": 66.0, "score": 0.32, "verdict": "Bullish", "intraday": {"stage": 0.667, "trend": 0.833, "momentum": 0.186, "volume": 0.929, "score": 54.2, "normalized": 77.1, "trend_signals": [44, 48]}, "higher": {"stage": 0.5, "trend": -0.167, "momentum": 0.088, "volume": 0.91, "score": 9.7, "normalized": 54.9, "trend_signals": [10, 24]}, "components": {"stage": 0.584, "trend": 0.333, "momentum": 0.137, "volume": 0.919}}, "combined": {"score": 0.46, "verdict": "Bullish", "confluence": true}, "retail": {"long": 30.0, "short": 70.0, "available": true}, "conviction": {"internal": true, "horizon": true, "contra": true, "count": 3, "total": 3, "our_dir": 1}, "levels": {"high": 1.91918, "low": 1.87323, "tf": "D"}}, {"pair": "GBPCAD", "cells": {"M15": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 2  prev 3  gate open  SBSSSBSBBBSS", "bars": 5000}, "M30": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 1  prev 3  gate open  SBBBSSBSBBBS", "bars": 5000}, "H1": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 3  gate open  BSSBBBSSBBBS", "bars": 5000}, "H2": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 2  gate open  SBBSSSSBBSSB", "bars": 5000}, "H4": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SSBBSSBSBBSB", "bars": 5000}, "H12": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 3  gate open  SSSBBBBSBBBS", "bars": 5000}, "D": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 2  prev 1  gate shut  BBSBBBSSBSBB", "bars": 5000}, "3D": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 2  gate open  BBBBSBBSSBBB", "bars": 2168}, "W": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 2  gate open  BBSBBBBBBSSB", "bars": 1167}, "MN": {"tag": "Redistribution", "debug": "dom S  cnt 2  cur 2  prev 2  gate open  SSSSSBSSBB", "bars": 268}}, "model_bias": {"pct": 60.0, "score": 0.2, "verdict": "Bullish", "bull": 6, "bear": 4}, "sentiment": {"intraday_pct": 39.8, "higher_pct": 65.2, "overall_pct": 52.5, "score": 0.05, "verdict": "Mixed", "intraday": {"stage": 0.0, "trend": -0.333, "momentum": -0.128, "volume": 1.212, "score": -20.3, "normalized": 39.8, "trend_signals": [16, 48]}, "higher": {"stage": 0.5, "trend": 1.0, "momentum": 0.162, "volume": 0.51, "score": 30.3, "normalized": 65.2, "trend_signals": [24, 24]}, "components": {"stage": 0.25, "trend": 0.334, "momentum": 0.017, "volume": 0.861}}, "combined": {"score": 0.125, "verdict": "Mixed", "confluence": false}, "retail": {"long": 23.0, "short": 77.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": true, "count": 2, "total": 3, "our_dir": 1}, "levels": {"high": 1.90441, "low": 1.86348, "tf": "D"}}, {"pair": "AUDNZD", "cells": {"M15": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 11  gate open  SSSSSSSSSSSB", "bars": 5000}, "M30": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 8  gate open  SBBSSSSSSSSB", "bars": 5000}, "H1": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 4  gate open  BBBBSSBSSSSB", "bars": 5000}, "H2": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 2  gate open  BSBBBBSSSBBS", "bars": 5000}, "H4": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 2  gate open  BBBBBBSSSBBS", "bars": 5000}, "H12": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 5  gate open  BBBSSSBBBBBS", "bars": 5000}, "D": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 3  gate open  BBBSBBBBSSSB", "bars": 5000}, "3D": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 3  gate open  SBBBBBBBSSSB", "bars": 2173}, "W": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 5  prev 1  gate shut  SSSSBBSBBBBB", "bars": 1171}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 2  gate open  SBBBSSBBB", "bars": 268}}, "model_bias": {"pct": 70.0, "score": 0.4, "verdict": "Bullish", "bull": 7, "bear": 3}, "sentiment": {"intraday_pct": 28.1, "higher_pct": 78.2, "overall_pct": 53.2, "score": 0.064, "verdict": "Mixed", "intraday": {"stage": 0.0, "trend": -1.0, "momentum": -0.23, "volume": 0.95, "score": -43.9, "normalized": 28.1, "trend_signals": [0, 48]}, "higher": {"stage": 1.0, "trend": 0.333, "momentum": 0.125, "volume": 1.208, "score": 56.4, "normalized": 78.2, "trend_signals": [16, 24]}, "components": {"stage": 0.5, "trend": -0.334, "momentum": -0.053, "volume": 1.079}}, "combined": {"score": 0.232, "verdict": "Bullish", "confluence": false}, "retail": {"long": 35.0, "short": 65.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": true, "count": 2, "total": 3, "our_dir": 1}, "levels": {"high": 1.24778, "low": 1.19482, "tf": "D"}}, {"pair": "NZDJPY", "cells": {"M15": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 7  prev 3  gate open  SBSSSBBBBBBB", "bars": 5000}, "M30": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 5  prev 2  gate open  SBBBBSSBBBBB", "bars": 5000}, "H1": {"tag": "Redistribution", "debug": "dom S  cnt 2  cur 2  prev 2  gate open  SSSSSBSBSSBB", "bars": 5000}, "H2": {"tag": "Accumulation", "debug": "dom S  cnt 1  cur 1  prev 1  gate shut  SBBSBSSSSBSB", "bars": 5000}, "H4": {"tag": "Redistribution", "debug": "dom S  cnt 1  cur 1  prev 4  gate open  SSSSSSBSSSSB", "bars": 5000}, "H12": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 5  prev 2  gate open  BSBSSBBSSSSS", "bars": 5000}, "D": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  BBSSBSBSSBSS", "bars": 5000}, "3D": {"tag": "Distribution", "debug": "dom B  cnt 3  cur 3  prev 1  gate shut  BBBBBSBSBSSS", "bars": 2164}, "W": {"tag": "Distribution", "debug": "dom B  cnt 2  cur 2  prev 1  gate shut  BSSBBBBSSBSS", "bars": 1167}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 4  prev 4  gate open  BSBSSSSBBBB", "bars": 268}}, "model_bias": {"pct": 40.0, "score": -0.2, "verdict": "Bearish", "bull": 4, "bear": 6}, "sentiment": {"intraday_pct": 64.0, "higher_pct": 40.0, "overall_pct": 52.0, "score": 0.04, "verdict": "Mixed", "intraday": {"stage": 0.0, "trend": 0.75, "momentum": 0.121, "volume": 0.841, "score": 28.0, "normalized": 64.0, "trend_signals": [42, 48]}, "higher": {"stage": -0.5, "trend": -0.167, "momentum": -0.093, "volume": 0.83, "score": -20.1, "normalized": 40.0, "trend_signals": [10, 24]}, "components": {"stage": -0.25, "trend": 0.291, "momentum": 0.014, "volume": 0.835}}, "combined": {"score": -0.08, "verdict": "Mixed", "confluence": false}, "retail": {"long": 88.0, "short": 12.0, "available": true}, "conviction": {"internal": false, "horizon": false, "contra": false, "count": 0, "total": 3, "our_dir": 1}, "levels": {"high": 90.546, "low": 88.118, "tf": "D"}}, {"pair": "XAUUSD", "cells": {"M15": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 3  gate open  BBSBBBBBSSSB", "bars": 5000}, "M30": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 1  gate shut  SBSSSSBBBBSB", "bars": 5000}, "H1": {"tag": "Redistribution", "debug": "dom S  cnt 2  cur 2  prev 3  gate open  SBSSBBBSSSBB", "bars": 5000}, "H2": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 2  prev 3  gate open  SSBSSBBSSSBB", "bars": 5000}, "H4": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 3  gate open  SSBSSSBBSSSB", "bars": 5000}, "H12": {"tag": "Distribution", "debug": "dom S  cnt 0  cur 4  prev 3  gate open  BBSSSBBBSSSS", "bars": 5000}, "D": {"tag": "Re-accumulation", "debug": "dom B  cnt 2  cur 2  prev 2  gate open  BBBSBBSSBBSS", "bars": 5000}, "3D": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 1  prev 2  gate open  BSBBBBBBBSSB", "bars": 2202}, "W": {"tag": "Re-accumulation", "debug": "dom B  cnt 1  cur 1  prev 10  gate open  SBBBBBBBBBBS", "bars": 1073}, "MN": {"tag": "Accumulation", "debug": "dom B  cnt 0  cur 3  prev 3  gate open  BBBBBSSSBBB", "bars": 246}}, "model_bias": {"pct": 80.0, "score": 0.6, "verdict": "Bullish", "bull": 8, "bear": 2}, "sentiment": {"intraday_pct": 49.7, "higher_pct": 67.0, "overall_pct": 58.4, "score": 0.168, "verdict": "Mixed", "intraday": {"stage": 0.333, "trend": -0.25, "momentum": -0.024, "volume": 0.916, "score": -0.6, "normalized": 49.7, "trend_signals": [18, 48]}, "higher": {"stage": 1.0, "trend": -0.167, "momentum": -0.024, "volume": 1.5, "score": 34.0, "normalized": 67.0, "trend_signals": [10, 24]}, "components": {"stage": 0.666, "trend": -0.209, "momentum": -0.024, "volume": 1.208}}, "combined": {"score": 0.384, "verdict": "Bullish", "confluence": true}, "retail": {"long": 58.0, "short": 42.0, "available": true}, "conviction": {"internal": true, "horizon": false, "contra": false, "count": 1, "total": 3, "our_dir": 1}, "levels": {"high": 4217.395, "low": 4073.545, "tf": "D"}}], "timeframes": ["M15", "M30", "H1", "H2", "H4", "H12", "D", "3D", "W", "MN"], "tf_labels": {"M15": "15m", "M30": "30m", "H1": "1h", "H2": "2h", "H4": "4h", "H12": "12h", "D": "1D", "3D": "3D", "W": "1W", "MN": "1M"}, "meta": {"source": "OANDA practice", "demo": false, "retail_source": "forexsentimentdata + OANDA", "max_counter": 3, "min_dom_run": 2, "sentiment_intraday_tfs": ["M5", "M15", "M30", "H1", "H2", "H4"], "sentiment_higher_tfs": ["D", "W", "MN"], "ema_periods": [10, 20, 50, 200], "weights": {"stage": 30, "trend": 40, "momentum": 27}}, "state_meta": {"Accumulation": {"abbr": "ACC", "glyph": "\u25b2", "bias": "bull", "cls": "acc"}, "Re-accumulation": {"abbr": "RE-ACC", "glyph": "\u25b2", "bias": "bull", "cls": "reacc"}, "Distribution": {"abbr": "DIST", "glyph": "\u25bc", "bias": "bear", "cls": "dist"}, "Redistribution": {"abbr": "RE-DIST", "glyph": "\u25bc", "bias": "bear", "cls": "redist"}, "Neutral": {"abbr": "NEU", "glyph": "\u25a0", "bias": "flat", "cls": "neu"}}, "verdict_meta": {"Bullish": {"glyph": "\u25b2", "cls": "acc", "bias": "bull"}, "Bearish": {"glyph": "\u25bc", "cls": "dist", "bias": "bear"}, "Mixed": {"glyph": "\u25c6", "cls": "mixed", "bias": "flat"}, "Neutral": {"glyph": "\u25a0", "cls": "neu", "bias": "flat"}}, "generated": "2026-10-17 00:10 UTC"};
+const SM = DATA.state_meta, VM = DATA.verdict_meta, TFS = DATA.timeframes;
+const TFL = DATA.tf_labels || {}, tfLabel = tf => TFL[tf] || tf;
+let view = "models", biasFilter = "all", query = "", sortKey = null, sortDir = 1;
+
+const m = DATA.meta || {};
+document.getElementById('sub').textContent =
+  `${DATA.results.length} pares · modelo en ${TFS.length} TFs · sentiment v1.0 (compuesto) · actualizado ${DATA.generated}`;
+let chips = `<span class="chip">feed <b>${m.source||'—'}</b></span>`;
+if(m.demo) chips = `<span class="chip demo">DATA DEMO — conecta OANDA</span>` + chips;
+document.getElementById('meta').innerHTML = chips;
+
+// ---- helpers ----
+function pill(cls, glyph, text, tip){
+  const t = tip ? ` data-tip="${(tip+'').replace(/"/g,'&quot;')}"` : '';
+  return `<span class="pill ${cls}"${t}><span class="g">${glyph}</span>${text}</span>`;
+}
+function verdictPill(v, tip){ const x = VM[v]||VM.Neutral; return pill(x.cls, x.glyph, v.toUpperCase(), tip); }
+function biasOfVerdict(v){ return (VM[v]||VM.Neutral).bias; }
+function pct(n){ return n==null ? '<span class="na">s/d</span>' : n.toFixed(0)+'%'; }
+function barCell(p, tip){
+  if(p==null) return `<div class="barcell"><span class="na">sin datos</span></div>`;
+  const cls = p>55?'bull':(p<45?'bear':'mid');
+  const t = tip ? ` title="${(tip+'').replace(/"/g,'&quot;')}"` : '';
+  return `<div class="barcell"${t}><div class="bar"><i style="width:${p}%"></i></div>`+
+         `<span class="barnum ${cls}">${p.toFixed(0)}%</span></div>`;
+}
+function compCell(v){
+  if(v==null) return `<span class="na">–</span>`;
+  const cls = v>0.05?'bull':(v<-0.05?'bear':'mid');
+  return `<span class="comp ${cls}">${v>0?'+':''}${v.toFixed(2)}</span>`;
+}
+function volCell(v){ return v==null?'<span class="na">–</span>':`<span class="comp vol">×${v.toFixed(2)}</span>`; }
+function compTip(h){ return h?`stage ${h.stage}  trend ${h.trend}  mom ${h.momentum}  vol ×${h.volume}  → ${h.normalized}%`:''; }
+
+// ---- columnas por vista ----
+function headFor(v){
+  if(v==="models"){
+    let h = `<th class="pairhead">PAR</th>`;
+    for(const tf of TFS){ const s=(sortKey===tf)?'sorted':''; const a=(sortKey===tf)?(sortDir>0?'▼':'▲'):'↕';
+      h+=`<th class="${s}" data-sort="${tf}">${tfLabel(tf)}<span class="arrow">${a}</span></th>`; }
+    return h;
+  }
+  if(v==="sentiment"){
+    const cols=[["stage","STAGE"],["trend","TREND"],["mom","MOM"],["vol","VOL"],
+                ["intraday","INTRADÍA"],["higher","INSTIT."],["overall","GENERAL"],["sv","VEREDICTO"]];
+    let h=`<th class="pairhead">PAR</th>`;
+    for(const [k,lbl] of cols){ const s=(sortKey===k)?'sorted':''; const a=(sortKey===k)?(sortDir>0?'▼':'▲'):'↕';
+      h+=`<th class="${s}" data-sort="${k}">${lbl}<span class="arrow">${a}</span></th>`; }
+    return h;
+  }
+  // combined
+  const cols=[["model","MODELO"],["sent","SENTIMENT"],["combined","COMBINADO"]];
+  let h=`<th class="pairhead">PAR</th>`;
+  for(const [k,lbl] of cols){ const s=(sortKey===k)?'sorted':''; const a=(sortKey===k)?(sortDir>0?'▼':'▲'):'↕';
+    h+=`<th class="${s}" data-sort="${k}">${lbl}<span class="arrow">${a}</span></th>`; }
+  return h;
+}
+
+function rowFor(v, r){
+  if(v==="models"){
+    let tds=`<td class="pair">${r.pair}</td>`;
+    for(const tf of TFS){ const c=r.cells[tf];
+      if(!c){ tds+=`<td>${pill('neu','■','—')}</td>`; continue; }
+      const x=SM[c.tag]||SM.Neutral; tds+=`<td>${pill(x.cls,x.glyph,x.abbr,c.debug)}</td>`; }
+    return tds;
+  }
+  if(v==="sentiment"){
+    const s=r.sentiment||{}, c=s.components||{};
+    return `<td class="pair">${r.pair}</td>`+
+      `<td>${compCell(c.stage)}</td>`+
+      `<td>${compCell(c.trend)}</td>`+
+      `<td>${compCell(c.momentum)}</td>`+
+      `<td>${volCell(c.volume)}</td>`+
+      `<td>${barCell(s.intraday_pct, compTip(s.intraday))}</td>`+
+      `<td>${barCell(s.higher_pct, compTip(s.higher))}</td>`+
+      `<td>${barCell(s.overall_pct)}</td>`+
+      `<td>${verdictPill(s.verdict||'Neutral')}</td>`;
+  }
+  // combined
+  const mb=r.model_bias||{}, s=r.sentiment||{}, cb=r.combined||{};
+  const conf = cb.confluence ? `<span class="conf ${biasOfVerdict(cb.verdict)==='bear'?'bear':''}">CONFLUENCIA</span>` : '';
+  return `<td class="pair">${r.pair}</td>`+
+    `<td>${verdictPill(mb.verdict||'Neutral', 'modelo '+(mb.pct==null?'s/d':mb.pct+'% alcista'))}</td>`+
+    `<td>${verdictPill(s.verdict||'Neutral', 'sentiment '+(s.overall_pct==null?'s/d':s.overall_pct+'% alcista'))}</td>`+
+    `<td>${verdictPill(cb.verdict||'Neutral')}${conf}</td>`;
+}
+
+// valor para ordenar/filtrar
+function sortVal(v, r, key){
+  if(v==="models"){ const c=r.cells[key]; return c?({bull:2,flat:1,bear:0})[(SM[c.tag]||{}).bias]:-1; }
+  if(v==="sentiment"){ const s=r.sentiment||{}, c=s.components||{};
+    if(key==="sv") return ({bull:2,flat:1,bear:0})[biasOfVerdict(s.verdict||'Neutral')];
+    if(key==="stage") return c.stage==null?-9:c.stage;
+    if(key==="trend") return c.trend==null?-9:c.trend;
+    if(key==="mom") return c.momentum==null?-9:c.momentum;
+    if(key==="vol") return c.volume==null?-9:c.volume;
+    return s[key+"_pct"]==null?-1:s[key+"_pct"]; }
+  const mb=r.model_bias||{}, s=r.sentiment||{}, cb=r.combined||{};
+  if(key==="model") return mb.score==null?0:mb.score;
+  if(key==="sent")  return s.score==null?0:s.score;
+  return cb.score==null?0:cb.score;
+}
+function rowBias(v, r){
+  if(v==="models"){ return TFS.map(tf=>r.cells[tf]&&(SM[r.cells[tf].tag]||{}).bias); }
+  if(v==="sentiment"){ return [biasOfVerdict((r.sentiment||{}).verdict||'Neutral')]; }
+  return [biasOfVerdict((r.combined||{}).verdict||'Neutral')];
+}
+
+function render(){
+  document.getElementById('thead').innerHTML = `<tr>${headFor(view)}</tr>`;
+  document.querySelectorAll('th[data-sort]').forEach(th=>{
+    th.onclick=()=>{ const k=th.dataset.sort;
+      if(sortKey===k){sortDir=-sortDir;} else {sortKey=k;sortDir=1;} render(); };
+  });
+
+  let rows = DATA.results.filter(r=>{
+    if(query && !r.pair.toUpperCase().includes(query)) return false;
+    if(biasFilter!=="all"){ if(!rowBias(view,r).some(b=>b===biasFilter)) return false; }
+    return true;
+  });
+  if(sortKey){ rows = rows.slice().sort((a,b)=> sortDir*(sortVal(view,b,sortKey)-sortVal(view,a,sortKey))); }
+
+  const tb=document.getElementById('tbody');
+  const ncol = view==="models"?TFS.length+1:(view==="sentiment"?9:4);
+  if(!rows.length){ tb.innerHTML=`<tr><td colspan="${ncol}" class="empty">Sin resultados</td></tr>`; return; }
+  tb.innerHTML = rows.map(r=>`<tr>${rowFor(view,r)}</tr>`).join('');
+  renderLegend();
+}
+
+function renderLegend(){
+  const el=document.getElementById('legend');
+  if(view==="models"){
+    el.innerHTML = Object.entries(SM).map(([tag,x])=>
+      `<span class="item"><span class="swatch ${x.cls}"></span>${x.glyph} ${tag}</span>`).join('');
+  } else {
+    el.innerHTML = [['acc','▲ Bullish'],['dist','▼ Bearish'],['mixed','◆ Mixed'],['neu','■ Neutral']]
+      .map(([c,l])=>`<span class="item"><span class="swatch ${c}"></span>${l}</span>`).join('')
+      + (view==="sentiment"
+          ? `<span class="item">barra: verde = % alcista</span>`
+          : `<span class="item"><span class="conf">CONFLUENCIA</span> modelo y sentiment coinciden</span>`);
+  }
+}
+
+// eventos
+document.getElementById('q').addEventListener('input', e=>{ query=e.target.value.toUpperCase(); render(); });
+document.querySelectorAll('#biasFilters .btn').forEach(b=>{
+  b.onclick=()=>{ document.querySelectorAll('#biasFilters .btn').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); biasFilter=b.dataset.bias; render(); };
+});
+document.querySelectorAll('#tabs .tab').forEach(t=>{
+  t.onclick=()=>{ document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on'); view=t.dataset.view; sortKey=null; render(); };
+});
+
+const FOOTS = {
+  models: 'Vista Modelos · estados MB por timeframe · hover para ver dom/cnt/cur/prev/gate',
+  sentiment: 'Vista Sentiment v1.0 · compuesto = stage (tu modelo MB) + trend (EMAs) + momentum + volumen · fórmula de Ziks (30/40/27×vol) · hover en las barras para el desglose por horizonte',
+  combined: 'Vista Combinado · modelo + sentiment · CONFLUENCIA = ambos coinciden en dirección'
+};
+const _origRender = render;
+render = function(){ _origRender(); document.getElementById('foot').textContent = FOOTS[view]; };
+
+render();
+</script>
+</body>
+</html>
